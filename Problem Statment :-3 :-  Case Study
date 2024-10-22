@@ -1,1 +1,216 @@
+School Buddy is a new startup that helps students in identifying best schools as per their stream preferences. There are three streams in which students seek admission after passing their 10th board exams. Subjects for each of these streams are as follows:
+
+Arts - Hindi, English, History, Geography and Civics
+
+Science - Mathematics, Physics, Chemistry, Biology and Computer Science
+
+Commerce - Hindi, English, Mathematics, Computer Science and Physical Education
+
+School Buddy has collected marks scored by the same students for all the subjects for 3 consecutive years. Based on this information they have to find out below details:
+
+1. Reward the top performer (student) of each school based on cumulative marks scored in last three years for all the subjects 
+import pandas as pd
+
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+# Assuming the subjects are named and there is a column for 'Year'
+# Create a list of subject columns
+subject_columns = ['Hindi', 'English', 'Maths', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Geography', 'Civics', 'Physical Education']
+
+# Calculate cumulative marks
+cumulative_marks = data.groupby(['School', 'Student'])[subject_columns].sum().reset_index()
+
+# Add a total marks column
+cumulative_marks['Total_Marks'] = cumulative_marks[subject_columns].sum(axis=1)
+top_performers = cumulative_marks.loc[cumulative_marks.groupby('School')['Total_Marks'].idxmax()]
+print(top_performers[['School', 'Student', 'Total_Marks']])
+
+2. Rank each student within their own school based on their total marks scored in the year 2020 and compare the marks of Rank 10 for each school by arranging them in descending order.
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+data_2020 = data[data['Year'] == 2020]
+# List of subjects based on the streams
+subject_columns = ['Hindi', 'English', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Geography', 'Civics', 'Physical Education']
+
+# Calculate total marks for each student in 2020
+total_marks_2020 = data_2020.groupby(['School', 'Student'])[subject_columns].sum().reset_index()
+total_marks_2020['Total_Marks'] = total_marks_2020[subject_columns].sum(axis=1)
+total_marks_2020['Rank'] = total_marks_2020.groupby('School')['Total_Marks'].rank(ascending=False, method='min')
+rank_10_students = total_marks_2020[total_marks_2020['Rank'] == 10]
+rank_10_students_sorted = rank_10_students.sort_values(by='Total_Marks', ascending=False)
+print(rank_10_students_sorted[['School', 'Student', 'Total_Marks']])
+
+3. Find out students with the highest improvement for each subject from 2019-21 combining all the schools together
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+data_2019_2021 = data[data['Year'].isin([2019, 2021])]
+pivot_data = data_2019_2021.pivot_table(index=['School', 'Student'], columns='Year', values='Marks', aggfunc='sum').reset_index()
+# Assuming the subjects are defined in a list
+subjects = ['Hindi', 'English', 'Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'History', 'Geography', 'Civics', 'Physical Education']
+
+# Create a new DataFrame to store improvements
+improvement_data = pd.DataFrame()
+
+for subject in subjects:
+    improvement_data[subject] = pivot_data[2021][subject] - pivot_data[2019][subject]
+
+# Add Student and School columns
+improvement_data['School'] = pivot_data['School']
+improvement_data['Student'] = pivot_data['Student']
+max_improvements = {}
+for subject in subjects:
+    max_improvement_row = improvement_data.loc[improvement_data[subject].idxmax()]
+    max_improvements[subject] = {
+        'School': max_improvement_row['School'],
+        'Student': max_improvement_row['Student'],
+        'Improvement': max_improvement_row[subject]
+    }
+for subject, details in max_improvements.items():
+    print(f"{subject}: Student: {details['Student']} from {details['School']} with improvement of {details['Improvement']}")
+
+4. Identify best school for Arts, Science and Commerce streams based on marks scored by students in respective subjects for those streams in last three years
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+arts_subjects = ['Hindi', 'English', 'History', 'Geography', 'Civics']
+science_subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science']
+commerce_subjects = ['Hindi', 'English', 'Mathematics', 'Computer Science', 'Physical Education']
+# Average for Arts
+arts_avg = data[data['Subject'].isin(arts_subjects)].groupby('School')[arts_subjects].mean()
+
+# Average for Science
+science_avg = data[data['Subject'].isin(science_subjects)].groupby('School')[science_subjects].mean()
+
+# Average for Commerce
+commerce_avg = data[data['Subject'].isin(commerce_subjects)].groupby('School')[commerce_subjects].mean()
+arts_avg['Overall_Average'] = arts_avg.mean(axis=1)
+science_avg['Overall_Average'] = science_avg.mean(axis=1)
+commerce_avg['Overall_Average'] = commerce_avg.mean(axis=1)
+best_arts_school = arts_avg['Overall_Average'].idxmax()
+best_science_school = science_avg['Overall_Average'].idxmax()
+best_commerce_school = commerce_avg['Overall_Average'].idxmax()
+print(f"Best School for Arts: {best_arts_school}")
+print(f"Best School for Science: {best_science_school}")
+print(f"Best School for Commerce: {best_commerce_school}")
+
+5. If the marks obtained for each subject can be categorised under 5 sections like below:
+    
+          <=20 - Very Poor
+    
+    >20 - <=40 - Poor
+    
+    >40 - <=60 - Average
+    
+    >60 - <=80 - Good
+    
+    >80 - <=100 - Very Good
+Then calculate for each school how many students were in each category based on the avg. marks obtained each year
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+average_marks = data.groupby(['School', 'Student', 'Year']).mean().reset_index()
+def categorize_marks(avg_marks):
+    if avg_marks <= 20:
+        return 'Very Poor'
+    elif avg_marks <= 40:
+        return 'Poor'
+    elif avg_marks <= 60:
+        return 'Average'
+    elif avg_marks <= 80:
+        return 'Good'
+    else:
+        return 'Very Good'
+average_marks['Category'] = average_marks['Marks'].apply(categorize_marks)
+category_counts = average_marks.groupby(['School', 'Year', 'Category']).size().unstack(fill_value=0).reset_index()
+print(category_counts)
+
+6)  Which is the best school for each year 2019, 2020 and 2021 based on highest no. of students in Good and Very Good category
+
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+average_marks = data.groupby(['School', 'Student', 'Year']).mean().reset_index()
+def categorize_marks(avg_marks):
+    if avg_marks <= 20:
+        return 'Very Poor'
+    elif avg_marks <= 40:
+        return 'Poor'
+    elif avg_marks <= 60:
+        return 'Average'
+    elif avg_marks <= 80:
+        return 'Good'
+    else:
+        return 'Very Good'
+average_marks['Category'] = average_marks['Marks'].apply(categorize_marks)
+good_very_good = average_marks[average_marks['Category'].isin(['Good', 'Very Good'])]
+category_counts = good_very_good.groupby(['School', 'Year']).size().reset_index(name='Student_Count')
+best_schools = category_counts.loc[category_counts.groupby('Year')['Student_Count'].idxmax()]
+for index, row in best_schools.iterrows():
+    print(f"Best School for {row['Year']}: {row['School']} with {row['Student_Count']} students in Good and Very Good categories.")
+
+7)  Which is the fastest-growing School in Bangalore (Overall and Streamwise)?
+import pandas as pd
+# Load the data (after exporting the sheet to CSV)
+url = "Banglore Schools 2019.csv"  # Replace with actual path
+data = pd.read_csv(url)
+print(data.head())
+average_marks = data.groupby(['School', 'Year']).mean().reset_index()
+pivot_data = average_marks.pivot(index='School', columns='Year', values='Marks')
+pivot_data = pivot_data.reset_index()
+pivot_data['Growth'] = pivot_data[2021] - pivot_data[2019]
+fastest_growing_overall = pivot_data.loc[pivot_data['Growth'].idxmax()]
+# Define streams and subjects
+streams = {
+    'Arts': ['Hindi', 'English', 'History', 'Geography', 'Civics'],
+    'Science': ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'Computer Science'],
+    'Commerce': ['Hindi', 'English', 'Mathematics', 'Computer Science', 'Physical Education']
+}
+
+stream_growth = {}
+
+for stream, subjects in streams.items():
+    stream_data = data[data['Subject'].isin(subjects)]
+    avg_stream_marks = stream_data.groupby(['School', 'Year']).mean().reset_index()
+    pivot_stream_data = avg_stream_marks.pivot(index='School', columns='Year', values='Marks')
+    pivot_stream_data = pivot_stream_data.reset_index()
+    pivot_stream_data['Growth'] = pivot_stream_data[2021] - pivot_stream_data[2019]
+    stream_growth[stream] = pivot_stream_data.loc[pivot_stream_data['Growth'].idxmax()]
+print(f"Fastest Growing School Overall: {fastest_growing_overall['School']} with growth of {fastest_growing_overall['Growth']}")
+
+for stream, growth_data in stream_growth.items():
+    print(f"Fastest Growing School in {stream}: {growth_data['School']} with growth of {growth_data['Growth']}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
