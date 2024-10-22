@@ -15,5 +15,4 @@ improvement = data[data['Year'].isin([2019, 2021])].pivot_table(index=['Student'
 improvement['Improvement'] = improvement[2021] - improvement[2019]
 highest_improvement = improvement.loc[improvement.groupby('Subject')['Improvement'].idxmax()]
 
-# More implementations would follow similarly...
 
